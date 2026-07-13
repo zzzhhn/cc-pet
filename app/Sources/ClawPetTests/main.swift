@@ -65,6 +65,21 @@ check(t2.frame(atElapsedMs: 250).finished, "one-shot finished")
 // StateFileParser
 eq(StateFileParser.parse(Data(#"{"state":"working","ts":1,"session":"a"}"#.utf8)), .working, "parse valid working")
 eq(StateFileParser.parse(Data("garbage".utf8)), .hover, "parse corrupt -> hover")
+check(StateFileParser.parseSession(Data(#"{"state":"waiting","ts":42}"#.utf8)) == SessionState(state: .waiting, ts: 42), "parseSession waiting@42")
+check(StateFileParser.parseSession(Data("garbage".utf8)) == nil, "parseSession corrupt -> nil")
+check(StateFileParser.parseSession(Data(#"{"state":"working"}"#.utf8)) == SessionState(state: .working, ts: 0), "parseSession missing ts -> 0")
+
+// SessionStates: latest-by-ts + waiting count with TTL
+let sessions = [
+    SessionState(state: .working, ts: 100),
+    SessionState(state: .waiting, ts: 200),   // newest
+    SessionState(state: .waiting, ts: 50),    // stale relative to now=300, ttl=120
+]
+eq(SessionStates.latestState(sessions), .waiting, "latest = newest ts (waiting@200)")
+check(SessionStates.latestState([]) == nil, "latest of empty -> nil")
+eq(SessionStates.waitingCount(sessions, now: 300, ttlSec: 120), 1, "waiting count drops stale (only ts=200)")
+eq(SessionStates.waitingCount(sessions, now: 300, ttlSec: 1000), 2, "generous TTL counts both waiting")
+eq(SessionStates.waitingCount([SessionState(state: .working, ts: 300)], now: 300, ttlSec: 120), 0, "working never counts as waiting")
 
 // Version
 eq(ClawPet.version, "0.1.0", "version")

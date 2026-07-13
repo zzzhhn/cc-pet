@@ -14,5 +14,8 @@ public struct PetManifest: Codable, Equatable, Sendable {
     public let spritesheetPath: String
     public let cell: CellSize
     public let states: [StateSpec]
+    /// Optional hex (e.g. "#78C0C0") for the collapsed bubble's pixel body. Optional so
+    /// existing manifests decode unchanged; the app falls back to a default teal when absent.
+    public let accentColor: String?
     public func state(_ name: StateName) -> StateSpec? { states.first { $0.name == name.rawValue } }
 }

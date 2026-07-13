@@ -2,6 +2,7 @@
   "id": "placeholder",
   "displayName": "Placeholder",
   "spritesheetPath": "spritesheet.png",
+  "accentColor": "#7FC9C4",
   "cell": {
     "w": 192,
     "h": 208

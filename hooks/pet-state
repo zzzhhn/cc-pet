@@ -78,9 +78,20 @@ case "$event" in
                        state=cheer
                      fi
                      reset_turn ;;
+  SessionEnd)        # window closed -> drop this session's files so it stops counting
+                     # toward the bubble's waiting badge immediately (TTL is only a backstop).
+                     rm -f "${SESS}/${sid}.state.json" "$cfile" "$sfile" 2>/dev/null
+                     exit 0 ;;
   *)                 log "unknown event: '$event'"; exit 0 ;;
 esac
 
+# Per-session state (ts in SECONDS): the app scans sessions/*.state.json to pick the
+# most recently active session for the pet AND to count how many windows are waiting.
+sst="$(mktemp "${SESS}/.sst.XXXXXX")" \
+  && printf '{"state":"%s","ts":%s}' "$state" "$now" > "$sst" \
+  && mv -f "$sst" "${SESS}/${sid}.state.json"
+
+# Legacy single-file state (ts in MS): kept for backward compat + single-window fallback.
 tmp="$(mktemp "${PET_DIR}/.state.XXXXXX")" || { log "mktemp failed"; exit 0; }
 printf '{"state":"%s","ts":%s}' "$state" "${now}000" > "$tmp" && mv -f "$tmp" "$OUT"
 exit 0

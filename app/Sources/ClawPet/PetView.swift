@@ -10,6 +10,8 @@ final class PetView: NSView {
     private var lastDragDir: DragDirection?
     private var lastMouse: NSPoint = .zero
 
+    private var collapseButton: CollapseButton?
+
     init(image: CGImage, geometry: AtlasGeometry) {
         self.geo = geometry
         super.init(frame: .zero)
@@ -19,6 +21,17 @@ final class PetView: NSView {
         layer?.contentsGravity = .resizeAspect
     }
     required init?(coder: NSCoder) { fatalError() }
+
+    /// Add the top-right "collapse into bubble" button. Hidden until the pointer hovers the pet.
+    func installCollapse(accent: NSColor, onCollapse: @escaping () -> Void) {
+        let b = CollapseButton(accent: accent)
+        b.onCollapse = onCollapse
+        b.isHidden = true
+        b.autoresizingMask = [.minXMargin, .minYMargin]   // pin to top-right
+        b.setFrameOrigin(NSPoint(x: bounds.maxX - b.frame.width - 4, y: bounds.maxY - b.frame.height - 4))
+        addSubview(b)
+        collapseButton = b
+    }
 
     /// Show cell (row, frame). AtlasGeometry uses top-left origin; CALayer contentsRect
     /// origin is bottom-left, so flip Y: yLayer = 1 - (row+1)*h.
@@ -31,6 +44,10 @@ final class PetView: NSView {
         addTrackingArea(NSTrackingArea(rect: bounds,
             options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect], owner: self))
     }
+
+    // Reveal the collapse button only while hovering the pet (keeps the pet uncluttered at rest).
+    override func mouseEntered(with e: NSEvent) { collapseButton?.isHidden = false }
+    override func mouseExited(with e: NSEvent) { collapseButton?.isHidden = true }
 
     override func mouseDown(with e: NSEvent) {
         dragStart = NSEvent.mouseLocation

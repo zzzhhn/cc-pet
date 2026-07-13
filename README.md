@@ -54,6 +54,19 @@ hearts (click), typing (you type, needs Input Monitoring), wave (random, 30 s @ 
 
 Priority: **drag > one-shot gesture > typing > Claude-Code state > hover.**
 
+## Collapse into a bubble
+
+Hover the pet and a pixel **collapse** button appears at its top-right (or use the menubar
+**Collapse / Expand**). It tucks the pet into a 56×56 pixel bubble in the pet's accent color
+(`accentColor` in `pet.json`, default teal) with a mini idle thumbnail — drag to move, click to
+bring the pet back. The choice and both positions persist.
+
+The bubble carries a red **badge counting how many Claude Code windows are currently `waiting`**
+on you, so a tucked-away pet still tells you N sessions need attention. Each session writes its
+own `~/.claude/pet/sessions/<session_id>.state.json`; the app scans them, shows the most recently
+active session as the pet, and counts the waiting ones for the badge. A `SessionEnd` event (or a
+TTL) drops a closed/stale window so it stops counting.
+
 ## Make your own pet from a photo
 
 ```bash

@@ -143,3 +143,13 @@ Fix: gate on `CGPreflightListenEventAccess()` and prompt with `CGRequestListenEv
 the user to **Privacy & Security → Input Monitoring**. Note it's evaluated at process start, so
 relaunch after granting. (Also: ad-hoc re-signing every build changes the app's cdhash and
 invalidates a prior grant — sign with a stable identity, or stop rebuilding the installed binary.)
+
+**24. Counting "how many windows are waiting" needs per-session state, not one shared file.**
+All Claude Code windows share the same hook, so a single `state.json` only ever holds the *last*
+window's state — you can't count how many are waiting. Fix: have the hook also write a per-session
+`sessions/<session_id>.state.json` (`session_id` is in the hook payload). The app scans the
+directory: newest file (by embedded `ts`) drives the pet's display; the count of `waiting` files
+drives a bubble badge. Two gotchas — (a) `waiting` is a *frozen* state (the hook fires once and
+never refreshes), so a "closed while waiting" window would count forever; clear it on the
+`SessionEnd` event and keep a TTL as a backstop. (b) Key recency off the embedded `ts`, not
+filesystem mtime, so the reduction stays a pure, unit-testable function.

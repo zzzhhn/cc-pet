@@ -3,6 +3,7 @@ import ClawPetCore
 
 final class PetController {
     let manifest: PetManifest
+    let atlasImage: CGImage          // exposed so the bubble can crop an idle thumbnail
     var machine = PetStateMachine()
     private let view: PetView
     private let animator = FrameAnimator()
@@ -13,6 +14,7 @@ final class PetController {
         manifest = try! JSONDecoder().decode(PetManifest.self, from: mData)
         let imgPath = dir.appendingPathComponent(manifest.spritesheetPath)
         let cg = SpriteImage.load(imgPath) ?? SpriteImage.magentaPlaceholder()
+        atlasImage = cg
         let geo = AtlasGeometry(cols: 8, rows: manifest.states.count)
         view = PetView(image: cg, geometry: geo)
         animator.onFrame = { [weak self] r, f in self?.view.show(row: r, frame: f) }
