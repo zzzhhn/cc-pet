@@ -5,8 +5,11 @@ PET="${HOME}/.claude/pet"
 mkdir -p "${PET}/bin" "${PET}/pets"
 ( cd "${ROOT}/app" && swift build -c release )
 cp "${ROOT}/app/.build/release/ClawPet" "${PET}/bin/ClawPet"
-# also install the .app bundle so the SessionStart hook can launch via LaunchServices
-bash "${ROOT}/scripts/bundle_app.sh" >/dev/null 2>&1 || true
+# Ensure a stable self-signed identity exists so macOS TCC (Input Monitoring) keeps its grant
+# across rebuilds instead of re-prompting every time (ad-hoc cdhash changes each build).
+bash "${ROOT}/scripts/make_signing_cert.sh" || true
+# also install the .app bundle so the SessionStart hook can launch via LaunchServices (signed inside)
+bash "${ROOT}/scripts/bundle_app.sh" || true
 [ -d "${ROOT}/ClawPet.app" ] && ditto "${ROOT}/ClawPet.app" "${PET}/ClawPet.app"
 install -m 0755 "${ROOT}/hooks/pet-state" "${PET}/bin/pet-state"
 # Refresh the placeholder pet in place (no recursive delete).

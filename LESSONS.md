@@ -144,6 +144,8 @@ the user to **Privacy & Security → Input Monitoring**. Note it's evaluated at 
 relaunch after granting. (Also: ad-hoc re-signing every build changes the app's cdhash and
 invalidates a prior grant — sign with a stable identity, or stop rebuilding the installed binary.)
 
+## F. The collapse bubble
+
 **24. Counting "how many windows are waiting" needs per-session state, not one shared file.**
 All Claude Code windows share the same hook, so a single `state.json` only ever holds the *last*
 window's state — you can't count how many are waiting. Fix: have the hook also write a per-session
@@ -153,3 +155,35 @@ drives a bubble badge. Two gotchas — (a) `waiting` is a *frozen* state (the ho
 never refreshes), so a "closed while waiting" window would count forever; clear it on the
 `SessionEnd` event and keep a TTL as a backstop. (b) Key recency off the embedded `ts`, not
 filesystem mtime, so the reduction stays a pure, unit-testable function.
+
+**25. A borderless floating window can be dragged fully off-screen and lost.**
+macOS does not constrain borderless `.floating` windows to the visible area the way it constrains
+titled app windows. Drag the pet (or its bubble) past a screen edge and it is gone — you can't
+click or grab what you can't see, so it's stuck off-screen forever. Fix: after every drag *release*
+(and when restoring a saved origin, expanding, or collapsing), clamp the window so at least a
+margin of it stays within some screen's `visibleFrame`. Clamp on release, not mid-drag, so the
+drag itself still feels unconstrained.
+
+**26. A pixel-art shape needs cell-grid quantization, not a vector rounded-rect.**
+The first bubble was an `NSBezierPath(roundedRect:)` — a smooth, anti-aliased box that looked
+nothing like the pixel sprite floating inside it ("a box with a person," per the user). To read as
+pixel art, quantize the shape: walk a grid of N-point cells and fill a cell when its center falls
+inside the circle, with `setShouldAntialias(false)`. The stair-stepped edge then matches the
+nearest-neighbor sprite. A vector shape rendered at retina resolution is always too clean to pass
+as pixel art.
+
+**27. mouseEntered/Exited is unreliable on a borderless, non-key floating window.**
+The hover-reveal collapse button got stuck visible: `mouseExited` frequently never fires for a
+floating window that isn't key, so once the button showed it never hid again. Don't drive
+hover state from tracking-area enter/exit on these windows. Poll instead: a ~0.25 s timer checks
+`window.frame.contains(NSEvent.mouseLocation)` and toggles the button. Cheap, and reliable
+regardless of key/active state.
+
+**28. Ad-hoc signing makes every rebuild re-prompt for Input Monitoring; a stable self-signed identity fixes it.**
+TCC ties an Input Monitoring (or Accessibility) grant to the app's code identity. With ad-hoc
+signing (`codesign -s -`, which is also what a plain `swift build` leaves) there is no stable
+identity, so TCC falls back to the exact cdhash — and *every* rebuild changes the cdhash, silently
+revoking the grant. Fix: create a self-signed code-signing certificate once (a keychain
+`CSSMExext`/`Code Signing` cert) and sign the bundle with it (`codesign -s "ClawPet Dev" --force
+--deep ClawPet.app`) on every build. TCC then matches on the stable identity, so the grant survives
+rebuilds and the user grants Input Monitoring exactly once.

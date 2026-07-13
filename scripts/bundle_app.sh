@@ -19,4 +19,15 @@ cat > "${APP}/Info.plist" <<'PLIST'
   <key>LSUIElement</key><true/>
 </dict></plist>
 PLIST
+# Sign with the stable self-signed identity if present, so macOS TCC (Input Monitoring) keeps the
+# grant across rebuilds. Falls back to ad-hoc (which re-prompts each build) when it's absent.
+IDENTITY="ClawPet Dev"
+KC="${HOME}/Library/Keychains/clawpet-signing.keychain-db"
+if security find-identity -p codesigning "$KC" 2>/dev/null | grep -q "$IDENTITY"; then
+  security unlock-keychain -p clawpet "$KC" 2>/dev/null || true
+  codesign --force --deep -s "$IDENTITY" "${ROOT}/ClawPet.app" && echo "signed with '$IDENTITY'"
+else
+  echo "no stable identity; app is ad-hoc — run scripts/make_signing_cert.sh to stop Input Monitoring re-prompts"
+fi
+
 echo "built ${ROOT}/ClawPet.app"
