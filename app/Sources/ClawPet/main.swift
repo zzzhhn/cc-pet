@@ -14,7 +14,7 @@ let app = NSApplication.shared
 app.setActivationPolicy(.accessory)   // menubar only, no Dock icon
 let coordinator = AppCoordinator()
 
-let petDir = ("~/.claude/pet/pets/placeholder" as NSString).expandingTildeInPath
+let petDir = ("~/.claude/pet/pets/fairy-singer" as NSString).expandingTildeInPath
 let controller = PetController(petDir: petDir)
 
 let window = PetWindow(size: NSSize(width: 192, height: 208))
@@ -47,7 +47,7 @@ _ = watcher
 let kbd = KeyboardActivityMonitor(onPermission: { granted in
     status.button?.title = granted ? "🧚" : "🧚⚠️"
     if !granted {
-        let item = NSMenuItem(title: "键盘感知:未授权 (打开系统设置)",
+        let item = NSMenuItem(title: "键盘感知:未授权 (输入监控)",
             action: #selector(AppCoordinator.openAccessibility), keyEquivalent: "")
         item.target = coordinator
         menu.insertItem(item, at: 0)

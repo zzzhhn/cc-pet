@@ -133,3 +133,13 @@ non-zero on failure. Pure value-type logic needs no test framework.
 Bug 20 was cracked by adding a one-line write-log to the hook, which proved the *hook* was correct and the
 *app* was deaf — collapsing hours of speculation into one read. When a multi-component system misbehaves,
 log what crosses each boundary first, then look where the evidence points.
+
+**23. `typing` never fires even after granting Accessibility.**
+Symptom: `AXIsProcessTrusted()` returns true, but `CGEvent.tapCreate` still returns nil.
+Root cause: a keyboard-listening event tap on macOS 10.15+ needs the **Input Monitoring**
+permission (`kTCCServiceListenEvent`), NOT Accessibility. Accessibility is for *controlling* the
+machine; *listening* to input is a separate grant. Checking/prompting the wrong one wastes hours.
+Fix: gate on `CGPreflightListenEventAccess()` and prompt with `CGRequestListenEventAccess()`; guide
+the user to **Privacy & Security → Input Monitoring**. Note it's evaluated at process start, so
+relaunch after granting. (Also: ad-hoc re-signing every build changes the app's cdhash and
+invalidates a prior grant — sign with a stable identity, or stop rebuilding the installed binary.)

@@ -32,7 +32,7 @@ Install persistently and wire it to Claude Code:
 ```bash
 scripts/install.sh                 # build release, install binary + hook + placeholder pet
 # merge hooks/settings-hooks-snippet.json into ~/.claude/settings.json
-# grant Accessibility permission when prompted (enables the `typing` state)
+# grant Input Monitoring permission when prompted (enables the `typing` state)
 ```
 
 ## The 13 states and their triggers
@@ -50,7 +50,7 @@ scripts/install.sh                 # build release, install binary + hook + plac
 | hover | idle default (Claude done, an `idle_prompt` notification, or after a one-shot settles) |
 
 **From the mouse / keyboard / timer:** fly-left/right (drag), twirl (double-click),
-hearts (click), typing (you type, needs Accessibility), wave (random, 30 s @ 50 %, only when idle).
+hearts (click), typing (you type, needs Input Monitoring), wave (random, 30 s @ 50 %, only when idle).
 
 Priority: **drag > one-shot gesture > typing > Claude-Code state > hover.**
 
