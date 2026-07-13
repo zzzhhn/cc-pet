@@ -1,9 +1,9 @@
 import AppKit
 
-/// The collapsed pixel bubble: an accent-colored rounded pixel body with a mini idle-frame
-/// thumbnail of the pet, plus a red badge counting how many Claude Code windows are waiting.
-/// Everything is drawn in one Core Graphics pass (nearest-neighbor) so the pixel look and the
-/// on-top badge stay consistent without CALayer z-ordering games. Drag to move, click to expand.
+/// The collapsed pixel bubble: a chunky pixel-art soap bubble (a quantized circle with a rim and
+/// a glint) in the pet's accent color, with a mini idle thumbnail floating inside and a red badge
+/// counting waiting windows. Drawn as a grid of square cells so the circle reads as pixel art
+/// (matching the sprite), not a smooth vector shape. Drag to move, click to expand.
 final class BubbleView: NSView {
     private let atlas: CGImage
     private let cellRect: CGRect     // idle cell in atlas pixel coords (top-left origin)
@@ -35,33 +35,49 @@ final class BubbleView: NSView {
     override func draw(_ dirty: NSRect) {
         guard let ctx = NSGraphicsContext.current?.cgContext else { return }
         ctx.interpolationQuality = .none
+        ctx.setShouldAntialias(false)
 
-        // --- pixel bubble body: dark border, accent fill, light top highlight ---
-        let body = bounds.insetBy(dx: 3, dy: 3)
-        accent.darkened(by: 0.4).setFill()
-        NSBezierPath(roundedRect: body, xRadius: 12, yRadius: 12).fill()
-        let inner = body.insetBy(dx: 2, dy: 2)
+        let cx = bounds.midX, cy = bounds.midY
+        let R: CGFloat = 25            // outer radius (leaves a 3pt margin in the 56pt view)
+        let unit: CGFloat = 2          // art-pixel size -> chunky quantized circle
+        let inner = R - 2              // body radius inside the rim
+
+        // --- pixel circle: rim ring + accent body, cell by cell ---
+        let rim = accent.darkened(by: 0.45)
+        var y = bounds.minY
+        while y < bounds.maxY {
+            var x = bounds.minX
+            while x < bounds.maxX {
+                let d = hypot(x + unit / 2 - cx, y + unit / 2 - cy)
+                if d <= R {
+                    (d >= R - 2 ? rim : accent).setFill()
+                    NSBezierPath(rect: CGRect(x: x, y: y, width: unit, height: unit)).fill()
+                }
+                x += unit
+            }
+            y += unit
+        }
+
+        // --- mini idle thumbnail, clipped to the inner circle, nearest-neighbor ---
         NSGraphicsContext.current?.saveGraphicsState()
-        NSBezierPath(roundedRect: inner, xRadius: 10, yRadius: 10).setClip()
-        accent.setFill(); NSBezierPath(rect: inner).fill()
-        accent.lightened(by: 0.4).setFill()
-        NSBezierPath(rect: NSRect(x: inner.minX, y: inner.maxY - inner.height * 0.42,
-                                  width: inner.width, height: inner.height * 0.42)).fill()
-
-        // --- mini idle thumbnail, clipped to the bubble, nearest-neighbor ---
+        NSBezierPath(ovalIn: CGRect(x: cx - inner, y: cy - inner, width: 2 * inner, height: 2 * inner)).setClip()
         if let cell = atlas.cropping(to: cellRect) {
             let img = NSImage(cgImage: cell, size: NSSize(width: cellRect.width, height: cellRect.height))
-            // fit the cell into the inner circle with a little padding; bias up so feet don't clip
-            let side = inner.width * 0.86
-            let h = side * (cellRect.height / cellRect.width)
-            let rect = NSRect(x: inner.midX - side / 2, y: inner.midY - h / 2 + 2, width: side, height: h)
+            let w = inner * 2 * 0.80
+            let h = w * (cellRect.height / cellRect.width)
+            let rect = NSRect(x: cx - w / 2, y: cy - h / 2 + 1, width: w, height: h)
             img.draw(in: rect, from: .zero, operation: .sourceOver, fraction: 1,
                      respectFlipped: true, hints: [.interpolation: NSImageInterpolation.none])
         }
+        // --- glossy glint on the bubble surface (top-left), on top of the sprite ---
+        accent.lightened(by: 0.78).setFill()
+        NSBezierPath(rect: CGRect(x: cx - 15, y: cy + 9, width: 4, height: 4)).fill()
+        NSBezierPath(rect: CGRect(x: cx - 11, y: cy + 13, width: 2, height: 2)).fill()
         NSGraphicsContext.current?.restoreGraphicsState()
 
-        // --- red waiting badge, top-right, on top of everything ---
+        // --- red waiting badge, top-right, above everything ---
         guard waiting > 0 else { return }
+        ctx.setShouldAntialias(true)
         let d: CGFloat = 22
         let badge = NSRect(x: bounds.maxX - d, y: bounds.maxY - d, width: d, height: d)
         NSColor.white.setFill(); NSBezierPath(ovalIn: badge.insetBy(dx: -1, dy: -1)).fill()  // white ring
@@ -75,7 +91,7 @@ final class BubbleView: NSView {
         label.draw(at: NSPoint(x: badge.midX - size.width / 2, y: badge.midY - size.height / 2), withAttributes: attrs)
     }
 
-    // Drag to move (persist), click (no drag) to expand.
+    // Drag to move (clamped on release so it can't be lost off-screen), click to expand.
     override func mouseDown(with e: NSEvent) {
         dragStart = NSEvent.mouseLocation
         winStart = window?.frame.origin ?? .zero
@@ -88,6 +104,11 @@ final class BubbleView: NSView {
                                        y: winStart.y + (now.y - dragStart.y)))
     }
     override func mouseUp(with e: NSEvent) {
-        if didDrag { onMoved?(window?.frame.origin ?? .zero) } else { onExpand?() }
+        if didDrag {
+            window?.clampOntoScreen()
+            onMoved?(window?.frame.origin ?? .zero)
+        } else {
+            onExpand?()
+        }
     }
 }

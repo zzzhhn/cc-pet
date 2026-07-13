@@ -45,9 +45,12 @@ final class PetView: NSView {
             options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect], owner: self))
     }
 
-    // Reveal the collapse button only while hovering the pet (keeps the pet uncluttered at rest).
-    override func mouseEntered(with e: NSEvent) { collapseButton?.isHidden = false }
-    override func mouseExited(with e: NSEvent) { collapseButton?.isHidden = true }
+    /// Show/hide the collapse button. Driven by a mouse-in-window poll in main.swift, because
+    /// mouseEntered/Exited tracking is unreliable on borderless floating (non-key) windows —
+    /// exit often never fires, leaving the button stuck visible after the first hover.
+    func setCollapseVisible(_ v: Bool) {
+        if collapseButton?.isHidden == v { collapseButton?.isHidden = !v }
+    }
 
     override func mouseDown(with e: NSEvent) {
         dragStart = NSEvent.mouseLocation
@@ -79,6 +82,7 @@ final class PetView: NSView {
         controller?.machine.setDragging(nil)
         controller?.apply()
         if didDrag {
+            window?.clampOntoScreen()
             Persistence.saveOrigin(window?.frame.origin ?? .zero)
         } else if e.clickCount == 2 {
             fire(.twirl)

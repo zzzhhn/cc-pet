@@ -52,18 +52,22 @@ bubbleView.onMoved = { Persistence.saveBubbleOrigin($0) }
 
 let collapse = {
     window.orderOut(nil)
+    bubbleWindow.clampOntoScreen()
     bubbleWindow.orderFrontRegardless()
     Persistence.saveCollapsed(true)
 }
 let expand = {
     bubbleWindow.orderOut(nil)
+    window.clampOntoScreen()          // never expand the pet to an unreachable off-screen spot
     window.orderFrontRegardless()
     Persistence.saveCollapsed(false)
 }
 (controller.contentView as? PetView)?.installCollapse(accent: accent, onCollapse: collapse)
 bubbleView.onExpand = expand
 
-// Restore last collapsed/expanded state.
+// Restore last collapsed/expanded state, clamping saved origins in case they were off-screen.
+window.clampOntoScreen()
+bubbleWindow.clampOntoScreen()
 if Persistence.loadCollapsed() { bubbleWindow.orderFrontRegardless() }
 else { window.orderFrontRegardless() }
 
@@ -104,6 +108,9 @@ let typingTimer = Timer(timeInterval: 0.25, repeats: true) { _ in
     let before = controller.machine.display
     controller.machine.setTyping(kbd.typingActive)
     if controller.machine.display != before { controller.apply() }
+    // Reveal the collapse button only while the pointer is actually over the pet window.
+    let overPet = window.isVisible && window.frame.contains(NSEvent.mouseLocation)
+    (controller.contentView as? PetView)?.setCollapseVisible(overPet)
 }
 RunLoop.main.add(typingTimer, forMode: .common)
 
