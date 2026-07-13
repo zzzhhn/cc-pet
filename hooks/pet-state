@@ -1,0 +1,86 @@
+#!/usr/bin/env bash
+# Map a Claude Code hook event to a ClawPet state and atomically write it.
+# Reads the hook payload as JSON on STDIN (Claude Code passes event data there, not argv).
+# Per-session tool-call counting drives the singing easter-egg; isError drives droop.
+# Never breaks Claude Code: always exit 0.
+set -u
+PET_DIR="${HOME}/.claude/pet"
+SESS="${PET_DIR}/sessions"
+LOG="${PET_DIR}/pet-hook.log"
+OUT="${PET_DIR}/state.json"
+log() { printf '%s %s\n' "$(date +%FT%T)" "$*" >> "$LOG" 2>/dev/null; }
+trap 'log "error at line $LINENO"; exit 0' ERR
+mkdir -p "$PET_DIR" "$SESS" 2>/dev/null
+
+SINGING_TOOLS=8        # >= this many tool calls in a turn -> singing instead of cheer
+SINGING_SECS=120       # ...or a turn lasting this long
+
+payload="$(cat)"       # hook JSON on stdin
+# Extract event / session_id / isError. python3 is the parser (jq may be absent);
+# on failure, fall back to argv[1] for the event name (degraded but functional).
+parsed="$(printf '%s' "$payload" | python3 -c '
+import sys, json
+try:
+    d = json.load(sys.stdin)
+except Exception:
+    d = {}
+print((d.get("hook_event_name") or "") + "\t"
+      + (d.get("session_id") or "default") + "\t"
+      + ("true" if d.get("isError") else "false") + "\t"
+      + (d.get("notification_type") or ""))
+' 2>/dev/null)"
+event="$(printf '%s' "$parsed" | cut -f1)"
+sid="$(printf '%s' "$parsed" | cut -f2)"
+iserr="$(printf '%s' "$parsed" | cut -f3)"
+ntype="$(printf '%s' "$parsed" | cut -f4)"
+[ -z "$event" ] && event="${1:-}"
+[ -z "$sid" ] && sid="default"
+
+# Auto-launch the pet app on session start if it isn't already running (Q1/Q2:
+# a fresh Claude Code session brings the pet up on its own). Detached so closing
+# the terminal doesn't kill it.
+launch_pet_if_needed() {
+  pgrep -x ClawPet >/dev/null 2>&1 && return
+  # Launch via LaunchServices (`open`), NOT as a hook child. `open` hands the app to
+  # launchd and returns in ~0.2s, inheriting none of the hook's file descriptors or
+  # process group — so Claude Code never hangs waiting on session start. A raw
+  # background binary (nohup/&) can leave the app holding an inherited fd and stall CC.
+  local app="${PET_DIR}/ClawPet.app"
+  local bin="${PET_DIR}/bin/ClawPet"
+  if [ -d "$app" ]; then
+    open -g "$app" >/dev/null 2>&1
+  elif [ -x "$bin" ]; then
+    ( "$bin" </dev/null >/dev/null 2>&1 & ) >/dev/null 2>&1   # fallback if no .app bundle
+  fi
+}
+
+cfile="${SESS}/${sid}.count"
+sfile="${SESS}/${sid}.start"
+now="$(date +%s)"
+reset_turn() { printf '0' > "$cfile"; printf '%s' "$now" > "$sfile"; }
+
+case "$event" in
+  SessionStart)      state=greet;   reset_turn; launch_pet_if_needed ;;
+  UserPromptSubmit)  state=working; reset_turn ;;
+  PreToolUse)        state=working
+                     c="$(cat "$cfile" 2>/dev/null || echo 0)"
+                     printf '%s' "$((c + 1))" > "$cfile" ;;
+  PostToolUse)       if [ "$iserr" = "true" ]; then state=droop; else state=working; fi ;;
+  Notification)      # only an approval/permission prompt means "waiting on you";
+                     # an idle prompt means Claude is just idle -> hover, not waiting.
+                     if [ "$ntype" = "idle_prompt" ]; then state=hover; else state=waiting; fi ;;
+  Stop)              c="$(cat "$cfile" 2>/dev/null || echo 0)"
+                     s="$(cat "$sfile" 2>/dev/null || echo "$now")"
+                     elapsed="$((now - s))"
+                     if [ "$c" -ge "$SINGING_TOOLS" ] || [ "$elapsed" -ge "$SINGING_SECS" ]; then
+                       state=singing
+                     else
+                       state=cheer
+                     fi
+                     reset_turn ;;
+  *)                 log "unknown event: '$event'"; exit 0 ;;
+esac
+
+tmp="$(mktemp "${PET_DIR}/.state.XXXXXX")" || { log "mktemp failed"; exit 0; }
+printf '{"state":"%s","ts":%s}' "$state" "${now}000" > "$tmp" && mv -f "$tmp" "$OUT"
+exit 0

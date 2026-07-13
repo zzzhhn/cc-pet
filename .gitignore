@@ -1,0 +1,15 @@
+# Swift build
+app/.build/
+*.xcodeproj
+
+# Packaged app
+ClawPet.app/
+
+# Pipeline output + secrets
+out/
+.env
+
+# macOS
+.DS_Store
+__pycache__/
+*.bak

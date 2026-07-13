@@ -1,0 +1,188 @@
+{
+  "id": "placeholder",
+  "displayName": "Placeholder",
+  "spritesheetPath": "spritesheet.png",
+  "cell": {
+    "w": 192,
+    "h": 208
+  },
+  "states": [
+    {
+      "name": "greet",
+      "row": 0,
+      "frames": 4,
+      "durations": [
+        140,
+        140,
+        140,
+        280
+      ],
+      "loop": false
+    },
+    {
+      "name": "hover",
+      "row": 1,
+      "frames": 6,
+      "durations": [
+        280,
+        140,
+        140,
+        180,
+        180,
+        320
+      ],
+      "loop": true
+    },
+    {
+      "name": "working",
+      "row": 2,
+      "frames": 6,
+      "durations": [
+        130,
+        130,
+        130,
+        130,
+        130,
+        240
+      ],
+      "loop": true
+    },
+    {
+      "name": "typing",
+      "row": 3,
+      "frames": 6,
+      "durations": [
+        110,
+        110,
+        110,
+        110,
+        110,
+        200
+      ],
+      "loop": true
+    },
+    {
+      "name": "waiting",
+      "row": 4,
+      "frames": 6,
+      "durations": [
+        150,
+        150,
+        150,
+        150,
+        150,
+        260
+      ],
+      "loop": true
+    },
+    {
+      "name": "cheer",
+      "row": 5,
+      "frames": 5,
+      "durations": [
+        140,
+        140,
+        140,
+        140,
+        280
+      ],
+      "loop": false
+    },
+    {
+      "name": "droop",
+      "row": 6,
+      "frames": 5,
+      "durations": [
+        160,
+        160,
+        160,
+        160,
+        300
+      ],
+      "loop": false
+    },
+    {
+      "name": "singing",
+      "row": 7,
+      "frames": 8,
+      "durations": [
+        150,
+        150,
+        150,
+        150,
+        150,
+        150,
+        150,
+        300
+      ],
+      "loop": false
+    },
+    {
+      "name": "fly-left",
+      "row": 8,
+      "frames": 6,
+      "durations": [
+        120,
+        120,
+        120,
+        120,
+        120,
+        120
+      ],
+      "loop": true
+    },
+    {
+      "name": "fly-right",
+      "row": 9,
+      "frames": 6,
+      "durations": [
+        120,
+        120,
+        120,
+        120,
+        120,
+        120
+      ],
+      "loop": true
+    },
+    {
+      "name": "wave",
+      "row": 10,
+      "frames": 4,
+      "durations": [
+        140,
+        140,
+        140,
+        280
+      ],
+      "loop": false
+    },
+    {
+      "name": "twirl",
+      "row": 11,
+      "frames": 6,
+      "durations": [
+        120,
+        120,
+        120,
+        120,
+        120,
+        240
+      ],
+      "loop": false
+    },
+    {
+      "name": "hearts",
+      "row": 12,
+      "frames": 5,
+      "durations": [
+        140,
+        140,
+        140,
+        140,
+        260
+      ],
+      "loop": false
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "hooks": {
+    "SessionStart":     [{"matcher": "", "hooks": [{"type": "command", "command": "~/.claude/pet/bin/pet-state SessionStart"}]}],
+    "UserPromptSubmit": [{"matcher": "", "hooks": [{"type": "command", "command": "~/.claude/pet/bin/pet-state UserPromptSubmit"}]}],
+    "PreToolUse":       [{"matcher": "", "hooks": [{"type": "command", "command": "~/.claude/pet/bin/pet-state PreToolUse"}]}],
+    "PostToolUse":      [{"matcher": "", "hooks": [{"type": "command", "command": "~/.claude/pet/bin/pet-state PostToolUse"}]}],
+    "Notification":     [{"matcher": "", "hooks": [{"type": "command", "command": "~/.claude/pet/bin/pet-state Notification"}]}],
+    "Stop":             [{"matcher": "", "hooks": [{"type": "command", "command": "~/.claude/pet/bin/pet-state Stop"}]}]
+  }
+}

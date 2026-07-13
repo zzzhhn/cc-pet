@@ -1,0 +1,13 @@
+cc-pet
+Copyright 2026 the cc-pet contributors
+
+This project is a derivative work inspired by:
+- "hatch-pet", OpenAI (Apache License 2.0) — the atlas contract and the
+  layout-guide + chroma-key + connected-component segmentation techniques.
+  https://github.com/openai/skills/tree/main/skills/.curated/hatch-pet
+- "claude-skill-codex-pet", Jiaxin Kou / Neta Art (Apache License 2.0) —
+  the image-generation-agnostic adaptation for coding agents.
+  https://github.com/kjx-talesofai/claude-skill-codex-pet
+
+The Swift app, hooks, generation pipeline, and documentation in this repository
+are original work licensed under Apache License 2.0.
