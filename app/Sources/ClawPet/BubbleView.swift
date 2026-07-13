@@ -75,20 +75,68 @@ final class BubbleView: NSView {
         NSBezierPath(rect: CGRect(x: cx - 11, y: cy + 13, width: 2, height: 2)).fill()
         NSGraphicsContext.current?.restoreGraphicsState()
 
-        // --- red waiting badge, top-right, above everything ---
+        // --- red waiting badge, top-right (pixel-quantized on the same 2pt grid as the bubble) ---
         guard waiting > 0 else { return }
-        ctx.setShouldAntialias(true)
-        let d: CGFloat = 22
-        let badge = NSRect(x: bounds.maxX - d, y: bounds.maxY - d, width: d, height: d)
-        NSColor.white.setFill(); NSBezierPath(ovalIn: badge.insetBy(dx: -1, dy: -1)).fill()  // white ring
-        NSColor.systemRed.setFill(); NSBezierPath(ovalIn: badge).fill()
-        let label = waiting > 9 ? "9+" : "\(waiting)"
-        let attrs: [NSAttributedString.Key: Any] = [
-            .font: NSFont.systemFont(ofSize: waiting > 9 ? 11 : 13, weight: .bold),
-            .foregroundColor: NSColor.white,
-        ]
-        let size = label.size(withAttributes: attrs)
-        label.draw(at: NSPoint(x: badge.midX - size.width / 2, y: badge.midY - size.height / 2), withAttributes: attrs)
+        let bcx = bounds.maxX - 13, bcy = bounds.maxY - 13   // inset so the full white rim shows
+        fillPixelDisc(cx: bcx, cy: bcy, r: 11, unit: unit, color: .white)       // white rim
+        fillPixelDisc(cx: bcx, cy: bcy, r: 9, unit: unit, color: .systemRed)    // red body
+        drawPixelText(waiting > 9 ? "9+" : "\(waiting)", cx: bcx, cy: bcy, px: unit, color: .white)
+    }
+
+    /// Fill a disc as square cells snapped to the view's global unit grid, so the badge's pixels
+    /// line up with the bubble's (no antialiasing — hard pixel edges).
+    private func fillPixelDisc(cx: CGFloat, cy: CGFloat, r: CGFloat, unit: CGFloat, color: NSColor) {
+        color.setFill()
+        let x0 = bounds.minX + floor((cx - r - bounds.minX) / unit) * unit
+        let y0 = bounds.minY + floor((cy - r - bounds.minY) / unit) * unit
+        var y = y0
+        while y <= cy + r {
+            var x = x0
+            while x <= cx + r {
+                if hypot(x + unit / 2 - cx, y + unit / 2 - cy) <= r {
+                    NSBezierPath(rect: CGRect(x: x, y: y, width: unit, height: unit)).fill()
+                }
+                x += unit
+            }
+            y += unit
+        }
+    }
+
+    /// Tiny 3x5 pixel font for the badge count (digits + "+"), drawn cell by cell, grid-snapped.
+    private static let pixelFont: [Character: [UInt8]] = [
+        "0": [0b111, 0b101, 0b101, 0b101, 0b111],
+        "1": [0b010, 0b110, 0b010, 0b010, 0b111],
+        "2": [0b111, 0b001, 0b111, 0b100, 0b111],
+        "3": [0b111, 0b001, 0b111, 0b001, 0b111],
+        "4": [0b101, 0b101, 0b111, 0b001, 0b001],
+        "5": [0b111, 0b100, 0b111, 0b001, 0b111],
+        "6": [0b111, 0b100, 0b111, 0b101, 0b111],
+        "7": [0b111, 0b001, 0b001, 0b010, 0b010],
+        "8": [0b111, 0b101, 0b111, 0b101, 0b111],
+        "9": [0b111, 0b101, 0b111, 0b001, 0b111],
+        "+": [0b000, 0b010, 0b111, 0b010, 0b000],
+    ]
+
+    private func drawPixelText(_ s: String, cx: CGFloat, cy: CGFloat, px: CGFloat, color: NSColor) {
+        color.setFill()
+        let glyphs = s.compactMap { Self.pixelFont[$0] }
+        guard !glyphs.isEmpty else { return }
+        let cols = 3, rows = 5, gap = 1
+        let totalCols = glyphs.count * cols + (glyphs.count - 1) * gap
+        // snap the text block to the same unit grid used everywhere else
+        let startX = bounds.minX + (floor((cx - CGFloat(totalCols) * px / 2 - bounds.minX) / px)) * px
+        let topY = bounds.minY + (floor((cy + CGFloat(rows) * px / 2 - bounds.minY) / px)) * px
+        var penX = startX
+        for g in glyphs {
+            for (r, bits) in g.enumerated() {
+                for c in 0..<cols where (bits >> (cols - 1 - c)) & 1 == 1 {
+                    let x = penX + CGFloat(c) * px
+                    let y = topY - CGFloat(r + 1) * px
+                    NSBezierPath(rect: CGRect(x: x, y: y, width: px, height: px)).fill()
+                }
+            }
+            penX += CGFloat(cols + gap) * px
+        }
     }
 
     // Drag to move (clamped on release so it can't be lost off-screen), click to expand.
